@@ -1,0 +1,4 @@
+*.exe
+*.pdb
+out/
+tests/bin/
