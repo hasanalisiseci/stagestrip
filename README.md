@@ -4,9 +4,9 @@ macOS Stage Manager's way of working, on Windows 10/11. The app you're using sta
 
 No installer and nothing to download first: it's a single small `.exe`, built with the C# compiler that already ships with Windows.
 
-![Preview of the strip](docs/preview.png)
+![StageStrip demo](docs/demo.gif)
 
-*Rendered sample with placeholder windows.*
+*Animation made with the app's own preview renderer and placeholder windows, not a screen recording. [Higher quality MP4](docs/demo.mp4).*
 
 ## Features
 
