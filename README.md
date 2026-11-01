@@ -21,7 +21,11 @@ No installer and nothing to download first: it's a single small `.exe`, built wi
 
 The interface is in Turkish for now.
 
-## Build and run
+## Download
+
+Get `StageStrip.exe` from [Releases](https://github.com/hasanalisiseci/stagestrip/releases) and run it. It isn't code-signed yet, so Windows SmartScreen may warn you the first time: choose "More info", then "Run anyway".
+
+## Build from source
 
 ```
 build.cmd

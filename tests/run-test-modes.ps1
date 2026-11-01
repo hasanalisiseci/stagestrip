@@ -16,6 +16,7 @@ public static class W {
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out R r);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
   [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
@@ -30,7 +31,14 @@ function OnScreen($h) { (Left $h) -lt 1920 }
 function State {
   Start-Sleep -Milliseconds 900
   $s = @{ tiles = @(); active = @() }
-  foreach ($l in Get-Content $debug) {
+  # The app rewrites this file constantly; only trust a complete copy ("moved=" is its last line).
+  $lines = @()
+  foreach ($try in 1..20) {
+    try { $lines = @(Get-Content $debug -ErrorAction Stop) } catch { $lines = @() }
+    if ($lines.Count -gt 0 -and $lines[-1] -like 'moved=*') { break }
+    Start-Sleep -Milliseconds 50
+  }
+  foreach ($l in $lines) {
     if ($l -match '^strip=(\d+) shown=(\w+)') { $s.strip = [long]$Matches[1]; $s.shown = $Matches[2] }
     elseif ($l -match '^active=(.*)') { $s.active = @($Matches[1] -split ',' | Where-Object { $_ }) }
     elseif ($l -match '^tile=(\d+),(\d+),(\d+),(\d+) windows=(.*)') {
@@ -93,9 +101,18 @@ try {
   $s = State
   $inTile = @($s.tiles | Where-Object { $_.win -contains "$ha" }).Count -eq 1
   Check 'minimize: goes to the strip' ($inTile -or ($s.active -notcontains "$ha")) "active=$($s.active -join ',')"
+  Check 'minimize: kept un-minimized off-screen for a live preview' ((-not [W]::IsIconic([IntPtr]$ha)) -and -not (OnScreen $ha)) "iconic=$([W]::IsIconic([IntPtr]$ha)) left=$(Left $ha)"
   ClickTileWith $s $ha
   $s = State
   Check 'minimize: click restores it' ((-not [W]::IsIconic([IntPtr]$ha)) -and (OnScreen $ha)) "iconic=$([W]::IsIconic([IntPtr]$ha)) left=$(Left $ha)"
+
+  # An app closed to the tray only hides its window: the tile stays, a click shows it again.
+  [W]::ShowWindow([IntPtr]$ha, 0) | Out-Null
+  $s = State
+  Check 'tray: hidden window keeps its tile' (@($s.tiles | Where-Object { $_.win -contains "$ha" }).Count -eq 1) "active=$($s.active -join ',')"
+  ClickTileWith $s $ha
+  $s = State
+  Check 'tray: click shows it again' ([W]::IsWindowVisible([IntPtr]$ha) -and (OnScreen $ha)) "left=$(Left $ha)"
   StopApp $app; $app = $null
 
   # One-at-a-time: one of the app's windows on stage, the other waits in the strip.
